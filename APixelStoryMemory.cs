@@ -63,25 +63,28 @@ namespace LiveSplit.APixelStory {
                 int itemHead = Memory.ReadValue<int>(proc, head, 0x08, 0x10 + (i * 4));
                 bool collected = Memory.ReadValue<bool>(proc, itemHead, 0x0c);
                 if (!collected) { continue; }
-
                 string name = GetString(Memory.ReadValue<int>(proc, itemHead, 0x08));
-                if (string.IsNullOrEmpty(filter) || name.Contains(filter)) {
-                    bool found = filters == null || filter.Length == 0;
-                    if (!found) {
-                        for (int j = 0; j < filters.Length; j++) {
-                            if (name.Contains(filters[j])) {
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (found) {
-                        count++;
-                    }
+                if (AddToList(name, filter, filters)) {
+                    count++;
                 }
             }
 
             return count;
+        }
+        private bool AddToList(string name, string filter, params string[] filters) {
+            if (string.IsNullOrEmpty(filter) || name.Contains(filter)) {
+                bool found = filters == null || filters.Length == 0;
+                if (!found) {
+                    for (int j = 0; j < filters.Length; j++) {
+                        if (name.Contains(filters[j])) {
+                            return true;
+                        }
+                    }
+                } else {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public List<GameItem> GetSolves() {
@@ -113,19 +116,8 @@ namespace LiveSplit.APixelStory {
                 if (!solved) { continue; }
 
                 string name = GetString(Memory.ReadValue<int>(proc, itemHead, 0x08));
-                if (string.IsNullOrEmpty(filter) || name.Contains(filter)) {
-                    bool found = filters == null || filters.Length == 0;
-                    if (!found) {
-                        for (int j = 0; j < filters.Length; j++) {
-                            if (name.Contains(filters[j])) {
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (found) {
-                        count++;
-                    }
+                if (AddToList(name, filter, filters)) {
+                    count++;
                 }
             }
 
@@ -166,6 +158,10 @@ namespace LiveSplit.APixelStory {
             return count;
         }
 
+        public bool IsDeathrun() {
+            return Memory.ReadValue<bool>(proc, gameStats, 0x9c);
+        }
+
         public float GetGameTime() {
             return Memory.ReadValue<float>(proc, gameStats, 0x3c, 0x4c);
         }
@@ -199,10 +195,6 @@ namespace LiveSplit.APixelStory {
         public string GetMapLevelName() {
             int head = Memory.ReadValue<int>(proc, gameStats, 0x14, 0xc8, 0x30, 0x80);
             return GetString(head);
-        }
-
-        public int GetTotalCoinCount() {
-            return Memory.ReadValue<int>(proc, gameStats, 0x14, 0xe4);
         }
 
         public FadeboxState GetFadeboxState() {

@@ -4,6 +4,7 @@ using LiveSplit.UI.Components;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 using System.Xml;
 namespace LiveSplit.APixelStory {
@@ -13,8 +14,14 @@ namespace LiveSplit.APixelStory {
         public IDictionary<string, Action> ContextMenuControls { get { return null; } }
         private APixelStoryMemory mem;
         private int currentSplit = 0;
-        internal static string[] keys = { "Time", "Generation", "Scene", "Map", "Section", "IsDead", "MemoryCount", "Fadebox" };
+        internal static string[] keys = { "Time", "Generation", "Scene", "Map", "Section", "IsDead", "MemoryCount", "Fadebox", "Deathrun" };
+        internal static Dictionary<string, string> rooms = new Dictionary<string, string>() {
+            {"Gen1Chal1","#1 "}, {"Gen1Chal2","#2 "}, {"Gen1Chal3","#3 "}, {"Gen1Chal4","#4 "}, {"Gen1Chal5","#5 "},
+            {"Gen2Chal1","#6 "}, {"Gen2Chal2","#7 "}, {"Gen2Chal3","#8 "}, {"Gen2Chal4","#9 "}, {"Gen2Chal5","#10"},
+            {"Gen3Chal1","#11"}, {"Gen3Chal2","#12"}, {"Gen3Chal3","#13"}, {"Gen3Chal4","#14"}, {"Gen3Chal5","#15"}
+        };
         private Dictionary<string, string> currentValues = new Dictionary<string, string>();
+        private Dictionary<string, TimeSpan> challengeTimes = new Dictionary<string, TimeSpan>();
 
         public APixelStoryComponent() {
             mem = new APixelStoryMemory();
@@ -27,7 +34,6 @@ namespace LiveSplit.APixelStory {
             if (!mem.HookProcess()) {
                 if (currentSplit > 0) {
                     if (Model != null) { Model.Reset(); }
-                    currentSplit = 0;
                 }
                 return;
             }
@@ -68,9 +74,51 @@ namespace LiveSplit.APixelStory {
                 case 12: shouldSplit = mem.GetLevelsCount("Gen4Core2", 2) == 1; break;
             }
 
+            if (Model != null && Model.CurrentState.Run.Count == 15 && mem.IsDeathrun()) {
+                string scene = mem.GetScene();
+                shouldSplit = currentValues["Scene"] != scene;
+                if (shouldSplit && scene != "MainMenu" && currentSplit < 15) {
+                    IRun run = Model.CurrentState.Run;
+
+                    challengeTimes.Clear();
+                    TimeSpan start = TimeSpan.Zero;
+                    for (int i = 0; i < run.Count; i++) {
+                        ISegment seg = run[i];
+                        if (seg.PersonalBestSplitTime.RealTime.HasValue) {
+                            challengeTimes.Add(seg.Name, (seg.PersonalBestSplitTime.RealTime.Value - start));
+                            start = seg.PersonalBestSplitTime.RealTime.Value;
+                            if (!seg.SplitTime.RealTime.HasValue) {
+                                seg.PersonalBestSplitTime = new Time();
+                            }
+                        } else {
+                            challengeTimes.Add(seg.Name, TimeSpan.Zero);
+                        }
+                    }
+
+                    string roomNumber = rooms[scene];
+                    for (int i = run.Count - 1; i > currentSplit; i--) {
+                        ISegment seg = run[i];
+                        if (seg.Name.IndexOf(roomNumber) >= 0) {
+                            run.RemoveAt(i);
+                            run.Insert(currentSplit, seg);
+                            break;
+                        }
+                    }
+
+                    start = TimeSpan.Zero;
+                    for (int i = 0; i < run.Count; i++) {
+                        ISegment seg = run[i];
+                        if (seg.PersonalBestSplitTime.RealTime.HasValue) {
+                            start = seg.PersonalBestSplitTime.RealTime.Value;
+                        } else {
+                            seg.PersonalBestSplitTime = new Time(GetSplitTime(i), null);
+                        }
+                    }
+                }
+            }
+
             if (currentSplit > 0 && mem.GetScene() == "MainMenu") {
                 if (Model != null) { Model.Reset(); }
-                currentSplit = 0;
             } else if (shouldSplit) {
                 if (currentSplit == 0) {
                     if (Model != null) { Model.Start(); }
@@ -91,13 +139,23 @@ namespace LiveSplit.APixelStory {
                     case "IsDead": curr = mem.GetIsDead().ToString(); break;
                     case "MemoryCount": curr = mem.GetCollectableCount("Chip").ToString(); break;
                     case "Fadebox": curr = mem.GetFadeboxState().ToString(); break;
+                    case "Deathrun": curr = mem.IsDeathrun().ToString(); break;
                 }
                 if (!prev.Equals(curr)) {
-                    WriteLog((Model != null ? Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) : DateTime.Now.ToString(@"HH\:mm\:ss.fff")) + ": " + key + ": ".PadRight(13 - key.Length, ' ') + prev.PadLeft(25, ' ') + " -> " + curr);
+                    WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + (Model != null ? Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) : DateTime.Now.ToString(@"HH\:mm\:ss.fff")) + ": " + key + ": ".PadRight(13 - key.Length, ' ') + prev.PadLeft(25, ' ') + " -> " + curr);
 
                     currentValues[key] = curr;
                 }
             }
+        }
+        private TimeSpan GetSplitTime(int index) {
+            IRun run = Model.CurrentState.Run;
+            TimeSpan total = TimeSpan.Zero;
+            for (int i = index; i >= 0; i--) {
+                ISegment seg = run[i];
+                total += challengeTimes[seg.Name];
+            }
+            return total;
         }
 
         public void Update(IInvalidator invalidator, LiveSplitState lvstate, float width, float height, LayoutMode mode) {
@@ -116,6 +174,7 @@ namespace LiveSplit.APixelStory {
         }
 
         public void OnReset(object sender, TimerPhase e) {
+            currentSplit = 0;
             WriteLog("---------Reset----------------------------------");
         }
         public void OnResume(object sender, EventArgs e) {
@@ -130,15 +189,15 @@ namespace LiveSplit.APixelStory {
         }
         public void OnUndoSplit(object sender, EventArgs e) {
             currentSplit--;
-            WriteLog(Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
+            WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
         }
         public void OnSkipSplit(object sender, EventArgs e) {
             currentSplit++;
-            WriteLog(Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
+            WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
         }
         public void OnSplit(object sender, EventArgs e) {
             currentSplit++;
-            WriteLog(Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
+            WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) + ": CurrentSplit: " + currentSplit.ToString().PadLeft(24, ' '));
         }
         private void WriteLog(string data) {
             //using (StreamWriter wr = new StreamWriter("_APixelStory.log", true)) {

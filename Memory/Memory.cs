@@ -8,9 +8,6 @@ namespace LiveSplit.APixelStory {
         const int MEM_PRIVATE = 0x00020000;
         const int PAGE_EXECUTE_READWRITE = 0x40;
 
-        public static IntPtr GetForegroundWindow() {
-            return SafeNativeMethods.GetForegroundWindow();
-        }
         public static T ReadValue<T>(Process targetProcess, int address, params int[] offsets) {
             byte[] buffer = new byte[8];
             int bytesRead;
@@ -45,21 +42,7 @@ namespace LiveSplit.APixelStory {
                     return (T)(object)BitConverter.ToBoolean(buffer, 0);
                 }
             } catch { }
-            if (typeof(T) == typeof(int)) {
-                return (T)(object)address;
-            } else if (typeof(T) == typeof(long)) {
-                return (T)(object)(long)address;
-            } else if (typeof(T) == typeof(byte)) {
-                return (T)(object)(byte)0;
-            } else if (typeof(T) == typeof(short)) {
-                return (T)(object)(short)0;
-            } else if (typeof(T) == typeof(float)) {
-                return (T)(object)(float)0;
-            } else if (typeof(T) == typeof(double)) {
-                return (T)(object)(double)0;
-            } else {
-                return (T)(object)false;
-            }
+            return default(T);
         }
         public static byte[] GetBytes(Process proc, int addr, int numBytes) {
             byte[] buffer = new byte[numBytes];
@@ -205,18 +188,12 @@ namespace LiveSplit.APixelStory {
         }
 
         private static class SafeNativeMethods {
-            [DllImport("user32.dll")]
-            public static extern IntPtr GetForegroundWindow();
             [DllImport("kernel32.dll", SetLastError = true)]
             public static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out int lpNumberOfBytesRead);
             [DllImport("kernel32.dll")]
             public static extern void GetSystemInfo(out SystemInfo lpSystemInfo);
             [DllImport("kernel32.dll", SetLastError = true)]
             public static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MemoryInfo lpBuffer, uint dwLength);
-            [DllImport("user32.dll")]
-            public static extern IntPtr GetClientRect(IntPtr hWnd, ref Rect rect);
-            [DllImport("user32.dll")]
-            public static extern bool ClientToScreen(IntPtr hWnd, ref Point lpPoint);
         }
     }
 }
