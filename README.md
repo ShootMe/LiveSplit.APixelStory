@@ -27,3 +27,7 @@ Horrible Truth:
  11. Activating Ragequit or Padthrower Memory Chip Plate In Elysian Fields
  12. Activating Ragequit or Padthrower Memory Chip Plate In Elysian Fields
  13. Learn The Horrible Truth
+ 
+Challenge Room Run:
+Make sure to prefix splits with #X to denote the challenge room. ie) #1 Room 1, ..., #12 Room 12, ..., #15 Last Room
+Splitter will rearrange splits in the order the rooms appear as you play through since they are randomized.
