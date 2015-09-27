@@ -210,6 +210,10 @@ namespace LiveSplit.APixelStory {
             return Memory.ReadValue<bool>(proc, gameStats, 0x14, 0xc8, 0x50, 0x1d);
         }
 
+        public int ChallengeRoomsCompleted() {
+            return Memory.ReadValue<int>(proc, gameStats, 0xa0);
+        }
+
         private string GetString(int address) {
             if (address == 0) { return string.Empty; }
             int length = Memory.ReadValue<int>(proc, address, 0x8);

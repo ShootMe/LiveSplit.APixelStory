@@ -14,12 +14,13 @@ namespace LiveSplit.APixelStory {
         public IDictionary<string, Action> ContextMenuControls { get { return null; } }
         private APixelStoryMemory mem;
         private int currentSplit = 0;
-        internal static string[] keys = { "Time", "Generation", "Scene", "Map", "Section", "IsDead", "MemoryCount", "Fadebox", "Deathrun" };
+        internal static string[] keys = { "Time", "Generation", "Scene", "Map", "Section", "IsDead", "MemoryCount", "Fadebox", "Deathrun", "RoomsCompleted" };
         internal static Dictionary<string, string> rooms = new Dictionary<string, string>() {
             {"Gen1Chal1","#1 "}, {"Gen1Chal2","#2 "}, {"Gen1Chal3","#3 "}, {"Gen1Chal4","#4 "}, {"Gen1Chal5","#5 "},
             {"Gen2Chal1","#6 "}, {"Gen2Chal2","#7 "}, {"Gen2Chal3","#8 "}, {"Gen2Chal4","#9 "}, {"Gen2Chal5","#10"},
             {"Gen3Chal1","#11"}, {"Gen3Chal2","#12"}, {"Gen3Chal3","#13"}, {"Gen3Chal4","#14"}, {"Gen3Chal5","#15"}
         };
+        private DateTime? finalDoor;
         private Dictionary<string, string> currentValues = new Dictionary<string, string>();
         private Dictionary<string, TimeSpan> challengeTimes = new Dictionary<string, TimeSpan>();
 
@@ -74,9 +75,14 @@ namespace LiveSplit.APixelStory {
                 case 12: shouldSplit = mem.GetLevelsCount("Gen4Core2", 2) == 1; break;
             }
 
-            if (Model != null && Model.CurrentState.Run.Count == 15 && mem.IsDeathrun()) {
-                string scene = mem.GetScene();
-                shouldSplit = currentValues["Scene"] != scene;
+            string scene = mem.GetScene();
+            int roomsCompleted = mem.ChallengeRoomsCompleted();
+            if (Model != null && Model.CurrentState.Run.Count == 15 && (Model.CurrentState.CurrentPhase == TimerPhase.Running || roomsCompleted < 15) && mem.IsDeathrun()) {
+                if (roomsCompleted == 15) {
+                    if (finalDoor == null) { finalDoor = DateTime.Now; }
+                } else { finalDoor = null; }
+
+                shouldSplit = currentValues["Scene"] != scene || (roomsCompleted == 15 && (DateTime.Now - finalDoor.Value).TotalSeconds >= 4.4);
                 if (shouldSplit && scene != "MainMenu" && currentSplit < 15) {
                     IRun run = Model.CurrentState.Run;
 
@@ -117,7 +123,7 @@ namespace LiveSplit.APixelStory {
                 }
             }
 
-            if (currentSplit > 0 && mem.GetScene() == "MainMenu") {
+            if (currentSplit > 0 && scene == "MainMenu") {
                 if (Model != null) { Model.Reset(); }
             } else if (shouldSplit) {
                 if (currentSplit == 0) {
@@ -140,9 +146,10 @@ namespace LiveSplit.APixelStory {
                     case "MemoryCount": curr = mem.GetCollectableCount("Chip").ToString(); break;
                     case "Fadebox": curr = mem.GetFadeboxState().ToString(); break;
                     case "Deathrun": curr = mem.IsDeathrun().ToString(); break;
+                    case "RoomsCompleted": curr = mem.ChallengeRoomsCompleted().ToString(); break;
                 }
                 if (!prev.Equals(curr)) {
-                    WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + (Model != null ? Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) : DateTime.Now.ToString(@"HH\:mm\:ss.fff")) + ": " + key + ": ".PadRight(13 - key.Length, ' ') + prev.PadLeft(25, ' ') + " -> " + curr);
+                    WriteLog(DateTime.Now.ToString(@"HH\:mm\:ss.fff") + " | " + (Model != null ? Model.CurrentState.CurrentTime.RealTime.Value.ToString("G").Substring(3, 11) : DateTime.Now.ToString(@"HH\:mm\:ss.fff")) + ": " + key + ": ".PadRight(16 - key.Length, ' ') + prev.PadLeft(25, ' ') + " -> " + curr);
 
                     currentValues[key] = curr;
                 }

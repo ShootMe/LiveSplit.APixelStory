@@ -50,7 +50,7 @@ namespace LiveSplit.APixelStory {
             SafeNativeMethods.ReadProcessMemory(proc.Handle, (IntPtr)addr, buffer, numBytes, out bytesRead);
             return buffer;
         }
-
+        
         public static int[] FindMemorySignatures(Process targetProcess, params string[] searchStrings) {
             int[] returnAddresses = new int[searchStrings.Length];
             MemorySignature[] byteCodes = new MemorySignature[searchStrings.Length];
