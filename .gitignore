@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/bin
+/.vs/LiveSplit.APixelStory/v14
+/obj
+/LiveSplit.APixelStory.v12.suo
+/LiveSplit.APixelStory.csproj.user
