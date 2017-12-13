@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <updates>
-	<update version="1.0.1">
+	<update version="1.2.5">
 		<files>
-			<file path="Components/LiveSplit.Chronology.dll" status="changed"/>
+			<file path="Components/LiveSplit.APixelStory.dll" status="changed"/>
 		</files>
 		<changelog>
-			<change> Fix Ending Split </change>
+			<change> Update Autosplitter </change>
 		</changelog>
 	</update>
 	<update version="1.0.0">
 		<files>
-			<file path="Components/LiveSplit.Chronology.dll" status="changed"/>
+			<file path="Components/LiveSplit.APixelStory.dll" status="changed"/>
 		</files>
 		<changelog>
 			<change> Initial Release </change>
