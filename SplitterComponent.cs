@@ -26,7 +26,7 @@ namespace LiveSplit.APixelStory {
 		private Dictionary<string, string> currentValues = new Dictionary<string, string>();
 #if !Info
 		internal static Dictionary<string, string> rooms = new Dictionary<string, string>() {
-			{"Gen1Chal1","#1"}, {"Gen1Chal2","#2"}, {"Gen1Chal3","#3"}, {"Gen1Chal4","#4"}, {"Gen1Chal5","#5"},
+			{"Gen1Chal1","#1 "}, {"Gen1Chal2","#2"}, {"Gen1Chal3","#3"}, {"Gen1Chal4","#4"}, {"Gen1Chal5","#5"},
 			{"Gen2Chal1","#6"}, {"Gen2Chal2","#7"}, {"Gen2Chal3","#8"}, {"Gen2Chal4","#9"}, {"Gen2Chal5","#10"},
 			{"Gen3Chal1","#11"}, {"Gen3Chal2","#12"}, {"Gen3Chal3","#13"}, {"Gen3Chal4","#14"}, {"Gen3Chal5","#15"}
 		};
