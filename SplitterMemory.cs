@@ -13,7 +13,7 @@ namespace LiveSplit.APixelStory {
 
 		public int GetCollectableCount(string filter, params string[] filters) {
 			//GameStats.stats.save.collectables
-			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x0, 0x3c, 0x14);
+			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x3c, 0x14);
 			int listSize = Program.Read<int>(head, 0x0C);
 
 			int count = 0;
@@ -46,7 +46,7 @@ namespace LiveSplit.APixelStory {
 		}
 		public int GetSolveCount(string filter, params string[] filters) {
 			//GameStats.stats.save.solve
-			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x0, 0x3c, 0x18);
+			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x3c, 0x18);
 			int listSize = Program.Read<int>(head, 0x0C);
 
 			int count = 0;
@@ -65,7 +65,7 @@ namespace LiveSplit.APixelStory {
 		}
 		public int GetLevelsCount(string filter, int state) {
 			//GameStats.stats.save.levelsCompleted
-			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x0, 0x3c, 0x10);
+			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x3c, 0x10);
 			int listSize = Program.Read<int>(head, 0x0C);
 
 			int count = 0;
@@ -83,20 +83,20 @@ namespace LiveSplit.APixelStory {
 		}
 		public bool IsDeathrun() {
 			//GameStats.stats.deathrunActive
-			return GameStats.Read<bool>(Program, 0x0, 0xa1);
+			return GameStats.Read<bool>(Program, 0xa1);
 		}
 		public float GetGameTime() {
 			//GameStats.stats.save.totalTimeInSave
-			return GameStats.Read<float>(Program, 0x0, 0x3c, 0x4c);
+			return GameStats.Read<float>(Program, 0x3c, 0x4c);
 		}
 		public GameItem GetCurrentSection() {
 			//GameStats.stats.save.sections
-			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x0, 0x3c, 0x28);
+			IntPtr head = (IntPtr)GameStats.Read<uint>(Program, 0x3c, 0x28);
 			int listSize = Program.Read<int>(head, 0x0C);
 			if (listSize <= 0) { return default(GameItem); }
 
 			//GameStats.stats.ui.playerMechanics.map.currentSectionIndex
-			int index = GameStats.Read<int>(Program, 0x0, 0x14, 0xc8, 0x30, 0x20c);
+			int index = GameStats.Read<int>(Program, 0x14, 0xc8, 0x30, 0x20c);
 			IntPtr itemHead = Program.Read<IntPtr>(head, 0x08, 0x10 + (index * 4));
 
 			GameItem section = new GameItem();
@@ -106,27 +106,27 @@ namespace LiveSplit.APixelStory {
 		}
 		public Generation GetCurrentGen() {
 			//GameStats.stats.currentGen
-			return (Generation)GameStats.Read<int>(Program, 0x0, 0x5c);
+			return (Generation)GameStats.Read<int>(Program, 0x5c);
 		}
 		public bool GetIsDead() {
 			//GameStats.stats.ui.playerMechanics.isDead
-			return GameStats.Read<bool>(Program, 0x0, 0x14, 0xc8, 0x85);
+			return GameStats.Read<bool>(Program, 0x14, 0xc8, 0x85);
 		}
 		public string GetMapLevelName() {
 			//GameStats.stats.ui.playerMechanics.map.mapLevelName
-			return Program.Read((IntPtr)GameStats.Read<uint>(Program, 0x0, 0x14, 0xc8, 0x30, 0x80));
+			return Program.Read((IntPtr)GameStats.Read<uint>(Program, 0x14, 0xc8, 0x30, 0x80));
 		}
 		public FadeboxState GetFadeboxState() {
 			//GameStats.stats.ui.fadeState
-			return (FadeboxState)GameStats.Read<int>(Program, 0x0, 0x14, 0x184);
+			return (FadeboxState)GameStats.Read<int>(Program, 0x14, 0x184);
 		}
 		public string GetScene() {
 			//GameStats.stats.nextScene
-			return Program.Read((IntPtr)GameStats.Read<uint>(Program, 0x0, 0x24));
+			return Program.Read((IntPtr)GameStats.Read<uint>(Program, 0x24));
 		}
 		public int ChallengeRoomsCompleted() {
 			//GameStats.stats.roomsCompleted
-			return GameStats.Read<int>(Program, 0x0, 0xa4);
+			return GameStats.Read<int>(Program, 0xa4);
 		}
 		public bool HookProcess() {
 			if ((Program == null || Program.HasExited) && DateTime.Now > lastHooked.AddSeconds(1)) {
@@ -164,6 +164,7 @@ namespace LiveSplit.APixelStory {
 		private DateTime lastTry;
 		private ProgramSignature[] signatures;
 		private int[] offsets;
+		private bool is64bit;
 		public IntPtr Pointer { get; private set; }
 		public PointerVersion Version { get; private set; }
 		public bool AutoDeref { get; private set; }
@@ -188,7 +189,7 @@ namespace LiveSplit.APixelStory {
 		public string Read(Process program, params int[] offsets) {
 			GetPointer(program);
 			IntPtr ptr = (IntPtr)program.Read<uint>(Pointer, offsets);
-			return program.Read(ptr);
+			return program.Read(ptr, is64bit);
 		}
 		public byte[] ReadBytes(Process program, int length, params int[] offsets) {
 			GetPointer(program);
@@ -217,8 +218,14 @@ namespace LiveSplit.APixelStory {
 
 				Pointer = GetVersionedFunctionPointer(program);
 				if (Pointer != IntPtr.Zero) {
+					is64bit = program.Is64Bit();
+					Pointer = (IntPtr)program.Read<uint>(Pointer);
 					if (AutoDeref) {
-						Pointer = (IntPtr)program.Read<uint>(Pointer);
+						if (is64bit) {
+							Pointer = (IntPtr)program.Read<ulong>(Pointer);
+						} else {
+							Pointer = (IntPtr)program.Read<uint>(Pointer);
+						}
 					}
 				}
 			}
